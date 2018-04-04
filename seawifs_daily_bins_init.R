@@ -34,17 +34,17 @@ files <- ocfiles(time.resolution = "daily", product = "SeaWiFS", varname = "RRS"
 
 #daterange <- as.POSIXct(c("2015-07-01", "2016-07-01"), tz = "GMT")
 lonrange <- c(-180, 180)
-latrange <- c(-78, -30)
-
+#latrange <- c(-78, -30)
+latrange <- c(-90, 90)
 library(roc)
 ## initialize the bin logic for MODISA
 init <- initbin(NUMROWS = 2160)
 latbin_idx <- which(between(init$latbin, latrange[1], latrange[2]))
-bins <- tibble(bin_num = seq(init$basebin[min(latbin_idx)], init$basebin[max(latbin_idx)+1]))
-xy <- bin2lonlat(bins$bin_num, 2160)
-bins <- bins %>% filter(between(xy$x, lonrange[1], lonrange[2])) %>%
-  mutate(bin_idx = row_number())
-rm(xy)
+bins <- tibble(bin_num = seq(init$basebin[min(latbin_idx)], init$basebin[min(c(max(latbin_idx)+1, length(init$latbin)))]))
+#xy <- bin2lonlat(bins$bin_num, 2160)
+#bins <- bins %>% filter(between(xy$x, lonrange[1], lonrange[2])) %>%
+#  mutate(bin_idx = row_number())
+#rm(xy)
 
 
 
