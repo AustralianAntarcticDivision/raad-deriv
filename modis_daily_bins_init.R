@@ -1,4 +1,3 @@
-
 library(raadtools)
 library(roc)
 library(tibble)
@@ -9,47 +8,17 @@ files <- ocfiles(time.resolution = "daily", product = "MODISA", varname = "RRS",
 
 #daterange <- as.POSIXct(c("2015-07-01", "2016-07-01"), tz = "GMT")
 lonrange <- c(-180, 180)
-latrange <- c(-78, -30)
-#' Read Level-3 ocean colour.
-#'
-#' Read the compound types (a.k.a. "tables") from ocean colour L3 NetCDF files.
-#'
-#' `read_binlist` for just the 'BinList'
-#' `read_compound` for just the compound data
-#' `read_L3_file` for everything at once
-#' @param file
-#'
-#' @return
-#' @export
-#' @name read_L3_file
-#' @examples
-read_binlist <- function(file) {
-  tibble::as_tibble(rhdf5::h5read(file, name = file.path("/level-3_binned_data", "BinList")))
-}
-#' @export
-#' @name read_L3_file
-read_compound <- function(file, compound_vars = NULL) {
-  info <- rhdf5::h5ls(file)
-  tab <- table(info$dim); wm <- which.max(tab); test <- names(tab[wm])
-  ## get all vars, or just the ones the users wants
-  if (is.null(compound_vars))  {
-    compound <- setdiff(info$name[info$dim == test], "BinList")
-  } else {
-    compound <- compound_vars
-  }
-  compoundpath <- file.path("/level-3_binned_data", compound)
-  l <- lapply(compoundpath, function(aname) tibble::as_tibble(rhdf5::h5read(file, name = aname)))
-  dplyr::bind_cols(lapply(seq_along(compound), function(i) setNames(l[[i]], sprintf("%s_%s", compound[i], names(l[[i]])))))
-}
+#latrange <- c(-78, -30)
+latrange <- c(-90, 90)
 library(roc)
 ## initialize the bin logic for MODISA
 init <- initbin(NUMROWS = 4320)
 latbin_idx <- which(between(init$latbin, latrange[1], latrange[2]))
-bins <- tibble(bin_num = seq(init$basebin[min(latbin_idx)], init$basebin[max(latbin_idx)+1]))
-xy <- bin2lonlat(bins$bin_num, 4320)
-bins <- bins %>% filter(between(xy$x, lonrange[1], lonrange[2])) %>%
-  mutate(bin_idx = row_number())
-rm(xy)
+bins <- tibble(bin_num = seq(init$basebin[min(latbin_idx)], init$basebin[min(c(max(latbin_idx)+1, length(init$latbin)))]))
+# xy <- bin2lonlat(bins$bin_num, 4320)
+# bins <- bins %>% filter(between(xy$x, lonrange[1], lonrange[2])) %>%
+#   mutate(bin_idx = row_number())
+# rm(xy)
 
 
 get_l3 <- function(file_package) {
@@ -58,7 +27,7 @@ get_l3 <- function(file_package) {
   yr <- format(datei, "%Y")
   
   fname <- file.path(getOption("default.datadir"), "data_local/acecrc.org.au/ocean_colour/modis_daily", yr, sprintf("%s", format(datei, "modis_%Y%j.rds")))
-  if (file.exists(fname)) return(NULL)
+ if (file.exists(fname)) return(NULL)
   bins <- file_package$bins
   binlist <- try(read_binlist(file), silent = TRUE)
   if (inherits(binlist, "try-error")) return(file)
@@ -71,7 +40,7 @@ get_l3 <- function(file_package) {
     dplyr::select(bin_num, chla_johnson, chla_nasa) %>%
     filter(!is.na(chla_johnson), chla_johnson > 0)  %>%
     mutate(date = datei)
- 
+  print(basename(fname))
   saveRDS(d1, fname, compress = FALSE)
 }
 
@@ -79,9 +48,8 @@ pkgs <- lapply(seq(nrow(files)), function(x) list(file = files$fullname[x], date
 library(future)
 plan(multiprocess)
 
+#"2018-04-03 16:12:15 AEST"
 print(Sys.time())
 aa <- future_lapply(pkgs, get_l3)
 print(Sys.time())
-
-
 
