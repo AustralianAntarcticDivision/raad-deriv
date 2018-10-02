@@ -1,5 +1,5 @@
 library(raadtools)
-library(roc)
+library(croc)
 library(tibble)
 library(dplyr)
 ## data frame of all L3 RRS files for MODISA
@@ -10,7 +10,7 @@ files <- ocfiles(time.resolution = "daily", product = "MODISA", varname = "RRS",
 lonrange <- c(-180, 180)
 #latrange <- c(-78, -30)
 latrange <- c(-90, 90)
-library(roc)
+
 ## initialize the bin logic for MODISA
 init <- initbin(NUMROWS = 4320)
 latbin_idx <- which(between(init$latbin, latrange[1], latrange[2]))
@@ -26,7 +26,8 @@ get_l3 <- function(file_package) {
   datei <- file_package$datei
   yr <- format(datei, "%Y")
   
-  fname <- file.path(getOption("default.datadir"), "data_local/acecrc.org.au/ocean_colour/modis_daily", yr, sprintf("%s", format(datei, "modis_%Y%j.rds")))
+#  "/rdsi/PRIVATE/raad/data_local/acecrc.org.au/ocean_colour/modis_daily",
+  fname <- file.path(outpath, yr, sprintf("%s", format(datei, "modis_%Y%j.rds")))
  if (file.exists(fname)) return(NULL)
   bins <- file_package$bins
   binlist <- try(read_binlist(file), silent = TRUE)
@@ -45,7 +46,7 @@ get_l3 <- function(file_package) {
 }
 
 pkgs <- lapply(seq(nrow(files)), function(x) list(file = files$fullname[x], datei = files$date[x], bins = bins))
-library(future)
+library(future.apply)
 plan(multiprocess)
 
 #"2018-04-03 16:12:15 AEST"

@@ -1,4 +1,4 @@
-source(file.path(getOption("default.datadir"), "data_local/acecrc.org.au/ocean_colour/oc-funs.R"))
+source("oc-funs.R")
 get_l3 <- function(file_package) {
   file <- file_package$file
   datei <- file_package$datei
@@ -25,7 +25,7 @@ get_l3 <- function(file_package) {
 }
 
 library(raadtools)
-library(roc)
+library(croc)
 library(tibble)
 library(dplyr)
 ## data frame of all L3 RRS files for SeaWiFS
@@ -36,7 +36,6 @@ files <- ocfiles(time.resolution = "daily", product = "SeaWiFS", varname = "RRS"
 lonrange <- c(-180, 180)
 #latrange <- c(-78, -30)
 latrange <- c(-90, 90)
-library(roc)
 ## initialize the bin logic for MODISA
 init <- initbin(NUMROWS = 2160)
 latbin_idx <- which(between(init$latbin, latrange[1], latrange[2]))
@@ -49,7 +48,7 @@ bins <- tibble(bin_num = seq(init$basebin[min(latbin_idx)], init$basebin[min(c(m
 
 
 pkgs <- lapply(seq(nrow(files)), function(x) list(file = files$fullname[x], datei = files$date[x], bins = bins))
-library(future)
+library(future.apply)
 plan(multiprocess)
 
 print(Sys.time())
