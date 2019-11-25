@@ -20,8 +20,8 @@ bins <- tibble(bin_num = seq(init$basebin[min(latbin_idx)], init$basebin[min(c(m
 #   mutate(bin_idx = row_number())
 # rm(xy)
 
-
-get_l3 <- function(file_package) {
+outp <- "/rdsi/PRIVATE/raad/data_local/acecrc.org.au/ocean_colour/modis_daily"
+get_l3 <- function(file_package, outpath) {
   file <- file_package$file
   datei <- file_package$datei
   yr <- format(datei, "%Y")
@@ -51,6 +51,6 @@ plan(multiprocess)
 
 #"2018-04-03 16:12:15 AEST"
 print(Sys.time())
-aa <- future_lapply(pkgs, get_l3)
+aa <- future_lapply(pkgs, get_l3, outpath = outp)
 print(Sys.time())
 

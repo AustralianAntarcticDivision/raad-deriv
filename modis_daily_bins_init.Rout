@@ -1,0 +1,289 @@
+
+R version 3.6.0 (2019-04-26) -- "Planting of a Tree"
+Copyright (C) 2019 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> library(raadtools)
+Loading required package: raster
+Loading required package: sp
+global option 'raadfiles.data.roots' set:
+'/rdsi/PRIVATE/raad/data               2019-10-09 10:35:17
+ /rdsi/PRIVATE/raad/data_local         2019-10-09 10:39:39
+ /rdsi/PRIVATE/raad/data_staging       2019-10-09 10:39:40
+ /rdsi/PRIVATE/raad/data_deprecated    2019-10-09 10:42:31
+ /rdsi/PUBLIC/raad/data                2019-10-09 10:58:11'
+Uploading raad file cache as at 2019-10-09 11:32:44 (1018728 files listed) 
+
+> library(croc)
+Loading required package: dplyr
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:raster’:
+
+    intersect, select, union
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+> library(tibble)
+> library(dplyr)
+> ## data frame of all L3 RRS files for MODISA
+> files <- ocfiles(time.resolution = "daily", product = "MODISA", varname = "RRS", type = "L3b", bz2.rm = TRUE, ext = "nc") %>%
++   as_tibble() %>% transmute(date, file = basename(fullname), fullname)
+> 
+> #daterange <- as.POSIXct(c("2015-07-01", "2016-07-01"), tz = "GMT")
+> lonrange <- c(-180, 180)
+> #latrange <- c(-78, -30)
+> latrange <- c(-90, 90)
+> 
+> ## initialize the bin logic for MODISA
+> init <- initbin(NUMROWS = 4320)
+> latbin_idx <- which(between(init$latbin, latrange[1], latrange[2]))
+> bins <- tibble(bin_num = seq(init$basebin[min(latbin_idx)], init$basebin[min(c(max(latbin_idx)+1, length(init$latbin)))]))
+> # xy <- bin2lonlat(bins$bin_num, 4320)
+> # bins <- bins %>% filter(between(xy$x, lonrange[1], lonrange[2])) %>%
+> #   mutate(bin_idx = row_number())
+> # rm(xy)
+> 
+> outp <- "/rdsi/PRIVATE/raad/data_local/acecrc.org.au/ocean_colour/modis_daily"
+> get_l3 <- function(file_package, outpath) {
++   file <- file_package$file
++   datei <- file_package$datei
++   yr <- format(datei, "%Y")
++   
++ #  "/rdsi/PRIVATE/raad/data_local/acecrc.org.au/ocean_colour/modis_daily",
++   fname <- file.path(outpath, yr, sprintf("%s", format(datei, "modis_%Y%j.rds")))
++  if (file.exists(fname)) return(NULL)
++   bins <- file_package$bins
++   binlist <- try(read_binlist(file), silent = TRUE)
++   if (inherits(binlist, "try-error")) return(file)
++   bins_present <- inner_join(bins, binlist, "bin_num")
++   if (nrow(bins_present) < 1) return(NULL)
++   d1 <-   bind_cols(binlist, read_compound(file,
++                                            compound_vars = c("Rrs_443", "Rrs_488", "Rrs_555", "Rrs_547"))) %>%
++     inner_join(bins, "bin_num")  %>% mutate(chla_johnson = chla(., sensor = "MODISA", algo = "johnson")) %>%
++     mutate(chla_nasa = chla(., sensor = "MODISA", algo = "oceancolor")) %>%
++     dplyr::select(bin_num, chla_johnson, chla_nasa) %>%
++     filter(!is.na(chla_johnson), chla_johnson > 0)  %>%
++     mutate(date = datei)
++   print(basename(fname))
++   saveRDS(d1, fname, compress = FALSE)
++ }
+> 
+> pkgs <- lapply(seq(nrow(files)), function(x) list(file = files$fullname[x], datei = files$date[x], bins = bins))
+> library(future.apply)
+Loading required package: future
+
+Attaching package: ‘future’
+
+The following object is masked from ‘package:raster’:
+
+    values
+
+> plan(multiprocess)
+> 
+> #"2018-04-03 16:12:15 AEST"
+> print(Sys.time())
+[1] "2019-10-09 11:32:57 AEDT"
+> aa <- future_lapply(pkgs, get_l3, outpath = outp)
+[1] "modis_2019001.rds"
+[1] "modis_2019002.rds"
+[1] "modis_2019003.rds"
+[1] "modis_2019004.rds"
+[1] "modis_2019005.rds"
+[1] "modis_2019006.rds"
+[1] "modis_2019007.rds"
+[1] "modis_2019008.rds"
+[1] "modis_2019009.rds"
+[1] "modis_2019010.rds"
+[1] "modis_2019011.rds"
+[1] "modis_2019012.rds"
+[1] "modis_2019013.rds"
+[1] "modis_2019014.rds"
+[1] "modis_2019015.rds"
+[1] "modis_2019016.rds"
+[1] "modis_2019017.rds"
+[1] "modis_2019018.rds"
+[1] "modis_2019019.rds"
+[1] "modis_2019020.rds"
+[1] "modis_2019021.rds"
+[1] "modis_2019022.rds"
+[1] "modis_2019023.rds"
+[1] "modis_2019024.rds"
+[1] "modis_2019025.rds"
+[1] "modis_2019026.rds"
+[1] "modis_2019027.rds"
+[1] "modis_2019028.rds"
+[1] "modis_2019029.rds"
+[1] "modis_2019030.rds"
+[1] "modis_2019031.rds"
+[1] "modis_2019032.rds"
+[1] "modis_2019033.rds"
+[1] "modis_2019034.rds"
+[1] "modis_2019035.rds"
+[1] "modis_2019036.rds"
+[1] "modis_2019037.rds"
+[1] "modis_2019038.rds"
+[1] "modis_2019039.rds"
+[1] "modis_2019040.rds"
+[1] "modis_2019041.rds"
+[1] "modis_2019042.rds"
+[1] "modis_2019043.rds"
+[1] "modis_2019044.rds"
+[1] "modis_2019045.rds"
+[1] "modis_2019046.rds"
+[1] "modis_2019047.rds"
+[1] "modis_2019048.rds"
+[1] "modis_2019049.rds"
+[1] "modis_2019050.rds"
+[1] "modis_2019051.rds"
+[1] "modis_2019052.rds"
+[1] "modis_2019053.rds"
+[1] "modis_2019054.rds"
+[1] "modis_2019055.rds"
+[1] "modis_2019056.rds"
+[1] "modis_2019057.rds"
+[1] "modis_2019058.rds"
+[1] "modis_2019059.rds"
+[1] "modis_2019060.rds"
+[1] "modis_2019061.rds"
+[1] "modis_2019062.rds"
+[1] "modis_2019063.rds"
+[1] "modis_2019064.rds"
+[1] "modis_2019065.rds"
+[1] "modis_2019066.rds"
+[1] "modis_2019067.rds"
+[1] "modis_2019068.rds"
+[1] "modis_2019069.rds"
+[1] "modis_2019070.rds"
+[1] "modis_2019071.rds"
+[1] "modis_2019072.rds"
+[1] "modis_2019073.rds"
+[1] "modis_2019074.rds"
+[1] "modis_2019075.rds"
+[1] "modis_2019076.rds"
+[1] "modis_2019077.rds"
+[1] "modis_2019078.rds"
+[1] "modis_2019079.rds"
+[1] "modis_2019080.rds"
+[1] "modis_2019081.rds"
+[1] "modis_2019082.rds"
+[1] "modis_2019083.rds"
+[1] "modis_2019084.rds"
+[1] "modis_2019085.rds"
+[1] "modis_2019086.rds"
+[1] "modis_2019087.rds"
+[1] "modis_2019088.rds"
+[1] "modis_2019089.rds"
+[1] "modis_2019090.rds"
+[1] "modis_2019091.rds"
+[1] "modis_2019092.rds"
+[1] "modis_2019093.rds"
+[1] "modis_2019094.rds"
+[1] "modis_2019095.rds"
+[1] "modis_2019096.rds"
+[1] "modis_2019097.rds"
+[1] "modis_2019098.rds"
+[1] "modis_2019099.rds"
+[1] "modis_2019100.rds"
+[1] "modis_2019101.rds"
+[1] "modis_2019102.rds"
+[1] "modis_2019103.rds"
+[1] "modis_2019104.rds"
+[1] "modis_2019105.rds"
+[1] "modis_2019106.rds"
+[1] "modis_2019107.rds"
+[1] "modis_2019108.rds"
+[1] "modis_2019109.rds"
+[1] "modis_2019110.rds"
+[1] "modis_2019111.rds"
+[1] "modis_2019112.rds"
+[1] "modis_2019113.rds"
+[1] "modis_2019114.rds"
+[1] "modis_2019115.rds"
+[1] "modis_2019116.rds"
+[1] "modis_2019117.rds"
+[1] "modis_2019118.rds"
+[1] "modis_2019119.rds"
+[1] "modis_2019120.rds"
+[1] "modis_2019121.rds"
+[1] "modis_2019122.rds"
+[1] "modis_2019123.rds"
+[1] "modis_2019124.rds"
+[1] "modis_2019125.rds"
+[1] "modis_2019126.rds"
+[1] "modis_2019127.rds"
+[1] "modis_2019128.rds"
+[1] "modis_2019129.rds"
+[1] "modis_2019130.rds"
+[1] "modis_2019131.rds"
+[1] "modis_2019132.rds"
+[1] "modis_2019133.rds"
+[1] "modis_2019134.rds"
+[1] "modis_2019135.rds"
+[1] "modis_2019136.rds"
+[1] "modis_2019137.rds"
+[1] "modis_2019138.rds"
+[1] "modis_2019139.rds"
+[1] "modis_2019140.rds"
+[1] "modis_2019141.rds"
+[1] "modis_2019142.rds"
+[1] "modis_2019143.rds"
+[1] "modis_2019144.rds"
+[1] "modis_2019145.rds"
+[1] "modis_2019146.rds"
+[1] "modis_2019147.rds"
+[1] "modis_2019148.rds"
+[1] "modis_2019149.rds"
+[1] "modis_2019150.rds"
+[1] "modis_2019151.rds"
+[1] "modis_2019152.rds"
+[1] "modis_2019153.rds"
+[1] "modis_2019154.rds"
+[1] "modis_2019155.rds"
+[1] "modis_2019156.rds"
+[1] "modis_2019157.rds"
+[1] "modis_2019158.rds"
+[1] "modis_2019159.rds"
+[1] "modis_2019160.rds"
+[1] "modis_2019161.rds"
+[1] "modis_2019162.rds"
+[1] "modis_2019163.rds"
+[1] "modis_2019164.rds"
+[1] "modis_2019165.rds"
+[1] "modis_2019166.rds"
+[1] "modis_2019167.rds"
+[1] "modis_2019168.rds"
+[1] "modis_2019169.rds"
+[1] "modis_2019170.rds"
+[1] "modis_2019171.rds"
+[1] "modis_2019172.rds"
+[1] "modis_2019173.rds"
+[1] "modis_2019174.rds"
+> print(Sys.time())
+[1] "2019-10-09 12:32:56 AEDT"
+> 
+> 
+> proc.time()
+    user   system  elapsed 
+  37.544    5.388 3622.105 
