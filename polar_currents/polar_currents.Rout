@@ -1,0 +1,144 @@
+
+R version 3.6.1 (2019-07-05) -- "Action of the Toes"
+Copyright (C) 2019 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+[Previously saved workspace restored]
+
+> default_grid <- function() {
++   
++   prjj <-         "+proj=laea +lat_0=-90 +datum=WGS84"
++   raster(spex::buffer_extent(projectExtent(raster(extent(-180, 180, -90, -30), 
++                                                   crs = "+init=epsg:4326"), 
++                                            prjj), 25000), 
++          res = 25000, crs = prjj)
++   
++   
++ }
+> 
+> 
+> library(raadtools)
+Loading required package: raster
+Loading required package: sp
+global option 'raadfiles.data.roots' set:
+'/rdsi/PRIVATE/raad/data               2019-11-24 23:35:10
+ /rdsi/PRIVATE/raad/data_local         2019-11-24 23:40:03
+ /rdsi/PRIVATE/raad/data_staging       2019-11-24 23:40:05
+ /rdsi/PRIVATE/raad/data_deprecated    2019-11-24 23:40:05
+ /rdsi/PUBLIC/raad/data                2019-11-24 23:57:10'
+Uploading raad file cache as at 2019-11-25 00:38:15 (864025 files listed) 
+
+> library(dplyr)
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:raster’:
+
+    intersect, select, union
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+> files <- currentsfiles()
+> 
+> #u <- readcurr(xylim = extent(-180, 180, -75, -20), uonly = TRUE)
+> #v <- readcurr(xylim = extent(-180, 180, -75, -20), vonly = TRUE)
+> 
+> ex <- extent(-180, 180, -75, -30)
+> geti_u <- function(i = 1) {
++   readcurr(files$date[i], xylim = ex, uonly = TRUE, inputfiles = files)
++ }
+> geti_v <- function(i = 1) {
++   readcurr(files$date[i], xylim = ex, vonly = TRUE, inputfiles = files)
++ }
+> u <- geti_u()
+> target <- default_grid()
+> library(nabor)
+> xy <- coordinates(target)
+> xyi <- rgdal::project(xy, projection(target), inv = TRUE)
+> library(tabularaster)
+> index <- tibble(cellindex = seq_len(ncell(u)))
+> index[c("qx", "qy")] <- rgdal::project(xyFromCell(u, index$cellindex), "+proj=eqc")
+> index[c("sx", "sy")] <- rgdal::project(xyFromCell(u, index$cellindex), projection(target))
+> knn <- WKNNF(as.matrix(index[c("sx", "sy")]))
+> 
+> dirbase <- "/rdsi/PRIVATE/raad/data_local/aad.gov.au/currents/polar"
+> for (i in seq_len(nrow(files))) {
++ #for (i in 9400:nrow(files)) {
++   ## split by year
++   diryear <- file.path(dirbase, format(files$date[i], "%Y"))
++   if (!file.exists(diryear)) dir.create(diryear)
++   #ufile <- file.path(diryear, gsub( "nc$", "grd", gsub("dt_global_allsat_phy_l4_", "dt_south_polar_u_", basename(files$fullname[i]))))
++   #vfile <- file.path(diryear, gsub( "nc$", "grd", gsub("dt_global_allsat_phy_l4_", "dt_south_polar_v_", basename(files$fullname[i]))))
++ 
++   ufile <- file.path(diryear, sprintf("dt_south_polar_u_%s_12345678.grd", format(files$date[i], "%Y%m%d")))
++   vfile <- file.path(diryear, sprintf("dt_south_polar_v_%s_12345678.grd", format(files$date[i], "%Y%m%d")))
++    if (file.exists(ufile) && file.exists(vfile)) next; 
++   
++   U <- try(geti_u(i))
++   if (inherits(U, "try-error")) next;
++   V <- geti_v(i)
++   index$x1 <- index$qx + values(U)
++   index$y1 <- index$qy + values(V)
++   
++   index[c("ex", "ey")] <- rgdal::project(rgdal::project(as.matrix(index[c("x1", "y1")]), "+proj=eqc", inv = TRUE), 
++                                          projection(target))
++   
++   index$pu <- index$sx - index$ex
++   index$pv <- index$sy - index$ey
++   
++   ee <- extract(U, xyi)
++   
++   xyq <- xy[!is.na(c(ee)), ]
++   idx <- knn$query(xyq, k = 1, eps = 0, radius = 0)
++   uu <- vv <- target
++   uu[!is.na(ee)] <- index$pu[idx$nn.idx]
++   vv[!is.na(ee)] <- index$pv[idx$nn.idx]
++   uu <- setZ(uu, files$date[i])
++   vv <- setZ(vv, files$date[i])
++   tmp <- writeRaster(uu, filename = ufile, overwrite = TRUE)
++   tmp <- writeRaster(vv, filename = vfile, overwrite = TRUE)
++   print(i)
++ }
+[1] 9083
+[1] 9807
+[1] 9808
+[1] 9809
+[1] 9810
+[1] 9811
+[1] 9812
+[1] 9813
+[1] 9814
+[1] 9815
+[1] 9816
+[1] 9817
+[1] 9818
+[1] 9819
+[1] 9820
+[1] 9821
+[1] 9822
+[1] 9823
+[1] 9824
+> 
+> proc.time()
+   user  system elapsed 
+ 48.905   3.639 142.173 
