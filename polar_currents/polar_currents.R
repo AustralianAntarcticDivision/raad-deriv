@@ -57,10 +57,15 @@ for (i in seq_len(nrow(files))) {
   index[c("ex", "ey")] <- rgdal::project(rgdal::project(as.matrix(index[c("x1", "y1")]), "+proj=eqc", inv = TRUE), 
                                          projection(target))
   
-  index$pu <- index$sx - index$ex
-  index$pv <- index$sy - index$ey
+  #index$pu <- index$sx - index$ex
+  #index$pv <- index$sy - index$ey
   
+## DAMN - get the sign right 2021-04-29 lols
+  index$pu <- index$ex - index$sx 
+  index$pv <- index$ey - index$sy
+
   ee <- extract(U, xyi)
+
   
   xyq <- xy[!is.na(c(ee)), ]
   idx <- knn$query(xyq, k = 1, eps = 0, radius = 0)
