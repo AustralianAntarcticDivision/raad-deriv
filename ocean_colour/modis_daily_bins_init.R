@@ -50,10 +50,11 @@ for (i in seq_len(nrow(files))) {
   }
 
   file <- files$fullname[i]
+  ## bit of redundancy with this in the function itself, because this was originally parallelized
   fname <- file.path(outp, yr, sprintf("%s", format(datei, "modis_%Y%j.rds")))
   if (!file.exists(fname)) {
 
     pkg <- list(file = file, datei = datei, bins = bins)
-    get_l3(pkg, outpt)
+    get_l3(pkg, outp)
   }
 }
