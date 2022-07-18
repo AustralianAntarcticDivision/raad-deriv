@@ -1,0 +1,32 @@
+---
+title: "GEBCO 2021 COG GEOTIFF"
+author: "Michael Sumner, Ben Raymond"
+date: '2022-07-07'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## GeoTIFF and GEBCO 
+
+
+GEBCO is the [The General Bathymetric Chart of the Oceans](https://www.gebco.net/) a global, complete topography dataset for the entire Earth. GEBCO has supplied versions of this data since 2008, and the AAD has published versions 2019 and 2021 as COGs. 
+
+See https://github.com/AustralianAntarcticDivision/raad-deriv/issues/3 for the earlier notes. 
+
+AADC versions are at
+
+https://data.aad.gov.au/metadata/GEBCO_2019_GEOTIFF
+
+https://data.aad.gov.au/metadata/GEBCO_2021_GEOTIFF
+
+these are best accessed by a GDAL tool with the following links. Performance is very fast near to the storage, which is in Tasmania. 
+
+```
+https://public.services.aad.gov.au/datasets/science/GEBCO_2021_GEOTIFF/GEBCO_2021.tif
+
+https://public.services.aad.gov.au/datasets/science/GEBCO_2019_GEOTIFF/GEBCO_2019.tif
+
+```
